@@ -1,0 +1,227 @@
+phases:
+  validate-orders:
+    mode: agent
+    agent: order-intake
+    directive: |
+      Read the delivery order batch from data/delivery-orders.json and service area context from data/service-area.json.
+      Validate every order for completeness: required fields, address quality, package dimensions vs fleet limits, time window format.
+      Normalize address strings, approximate lat/lng from zip code centroids in the service area data.
+      Identify duplicate orders (same order_id or same customer+address combination).
+      Flag express/priority orders that must be delivered before noon.
+      Write the validated batch to data/validated-orders.json — include every original order with added fields:
+        - validation_status: "valid" | "flagged" | "rejected"
+        - validation_notes: array of specific issues found
+        - normalized_address: standardized address string
+        - lat: approximate latitude
+        - lng: approximate longitude
+      Return verdict:
+        - advance: 70%+ orders are valid or flagged-but-usable
+        - rework: 30-70% of orders have problems that block routing (missing addresses, oversize packages)
+        - fail: >70% rejected or total valid count < 5
+    capabilities:
+      mutates_state: true
+      writes_files: true
+    decision_contract:
+      required_fields: [verdict, valid_count, rejected_count, flagged_count, summary]
+
+  cluster-deliveries:
+    mode: agent
+    agent: cluster-analyzer
+    directive: |
+      Read data/validated-orders.json (only orders with validation_status "valid" or "flagged") and data/service-area.json.
+      Group all delivery stops into geographic clusters suitable for single-driver routes.
+      Use service zone boundaries (zip code → zone mapping from service-area.json) as primary grouping.
+      Split zones with >25 stops into sub-clusters using proximity. Merge zones with <8 stops into adjacent zones.
+      Balance workload: target 4-6 hours per cluster accounting for drive time and dwell time.
+      Separate morning-only stops from afternoon-only stops when a zone has ≥8 of each type.
+      Compute for each cluster: cluster_id, zone, stop_count, total_weight_lbs, total_volume_cubic_ft,
+        estimated_duration_hours, center_lat, center_lng, dominant_time_window, vehicle_type_needed,
+        order_ids (list of orders in this cluster).
+      Write cluster assignments to data/delivery-clusters.json.
+    capabilities:
+      mutates_state: true
+      writes_files: true
+
+  optimize-routes:
+    mode: agent
+    agent: route-optimizer
+    directive: |
+      Read data/delivery-clusters.json and data/service-area.json (for drive speed profiles and depot location).
+      For each cluster, compute an optimized stop sequence using nearest-neighbor heuristics.
+      Apply time-window constraints: morning-only stops appear in first half of route, afternoon-only in second half.
+      Use zone-based drive speed from service-area.json (downtown: 15 mph, suburban: 25 mph, highway: 45 mph).
+      Dwell times per stop type: residential_package=2min, residential_signature=4min, commercial=5min, bulk=10min.
+      Assume drivers depart depot at 07:30. Compute planned arrival and departure for every stop.
+      For each route compute: route_id, cluster_id, ordered_stops (array with stop details),
+        total_distance_miles, total_duration_hours, efficiency_score (0-100),
+        depot_start, depot_return_time, time_window_violations (list).
+      Write optimized routes to data/optimized-routes.json.
+      Verdict:
+        - optimal: all routes ≤9 hours, efficiency scores ≥75, zero time-window violations
+        - acceptable: all routes ≤10 hours, minor efficiency issues or ≤2 time-window violations per route
+        - reroute: any route >10 hours OR >3 time-window violations — need to revise clustering
+    capabilities:
+      mutates_state: true
+      writes_files: true
+    decision_contract:
+      required_fields: [verdict, route_count, max_route_hours, avg_efficiency_score, issues]
+
+  assign-drivers:
+    mode: agent
+    agent: driver-assigner
+    directive: |
+      Read data/optimized-routes.json and data/driver-fleet.json.
+      For each route, find the best matching driver using this priority:
+        1. Vehicle type must match route's vehicle_type_needed (van/truck)
+        2. Vehicle capacity must exceed route total weight and volume
+        3. Driver zone familiarity — prefer drivers whose zone_familiarity includes route zip codes
+        4. Start location proximity — minimize distance from driver start_location to route first stop
+        5. Shift hours must cover route estimated_duration_hours plus 30-min buffer
+        6. Balance: avoid assigning 2 routes to same driver unless all others are assigned
+      Generate route manifests for each assigned driver. Each manifest must include:
+        - Driver info: name, phone, vehicle plate/type
+        - Route summary: total stops, estimated duration, start time
+        - Stop list with: stop number, full address, access notes (from special_instructions),
+          package list (item, weight, dims), planned arrival time, delivery type (standard/signature/bulk)
+        - Emergency contact: dispatcher number
+      Write driver-assignments.json: map of route_id → {driver_id, driver_name, assignment_rationale, route details}
+      Write documents/route-manifests.md: formatted printable manifest for each driver.
+    capabilities:
+      mutates_state: true
+      writes_files: true
+
+  track-progress:
+    mode: agent
+    agent: delivery-tracker
+    directive: |
+      Read data/driver-assignments.json for the day's routes and planned schedule.
+      Read data/delivery-progress.json if it exists (for current simulation state).
+      Simulate delivery execution: advance all routes forward in time.
+      For routes not yet started: mark as "pending".
+      For routes in progress: mark 60-80% of remaining stops as "completed" each simulation step.
+      Introduce realistic exceptions at ~15% of stops:
+        - 8% CUSTOMER_NOT_HOME (residential stops, especially apartments)
+        - 3% ADDRESS_NOT_FOUND (new construction areas, rural fringe)
+        - 2% ACCESS_DENIED (gated communities, secure buildings)
+        - 1% PACKAGE_DAMAGED (flagged before attempt)
+        - 1% CUSTOMER_REFUSED
+      For completed stops: record actual_delivery_time, on_time (bool based on time window).
+      For each failed stop: record failure_reason, driver_notes, attempt_timestamp.
+      Compute per-route running metrics: stops_completed, stops_failed, on_time_pct, projected_completion_time.
+      Write updated status to data/delivery-progress.json.
+      Verdict:
+        - completed: all routes have no remaining unresolved stops
+        - exceptions: one or more stops have failed and need exception handling
+        - rework: routes still in progress (advance simulation one more step)
+    capabilities:
+      mutates_state: true
+      writes_files: true
+    decision_contract:
+      required_fields: [verdict, total_stops, completed_stops, failed_stops, routes_finished]
+
+  handle-exceptions:
+    mode: agent
+    agent: exception-handler
+    directive: |
+      Read data/delivery-progress.json to identify all failed stops.
+      Read data/driver-assignments.json for route context (driver location, time remaining, special_instructions).
+      For each failed stop, determine the best resolution:
+        REATTEMPT_TODAY: only if driver <2 miles away, customer confirmed available, >90 min remaining in shift
+        REDIRECT_NEIGHBOR: if special_instructions mentions neighbor authorization, or shared building entry
+        REDIRECT_LOCKER: if a locker location in data/service-area.json is within 0.5 miles and package fits
+        RESCHEDULE_TOMORROW: first-attempt failure with no redirect option — add to next day's queue
+        RETURN_TO_DEPOT: second attempt failure, damage claim, COD refusal, safety incident
+
+      For each resolution:
+        - Document original failure reason and exception type
+        - Record decision with full rationale
+        - Specify next steps (driver action, customer notification, billing flag)
+        - If REATTEMPT_TODAY: update driver's remaining schedule with new stop insertion
+        - If RETURN_TO_DEPOT: generate return_authorization_code and depot intake instructions
+
+      Write all exception resolutions to data/failed-deliveries.json.
+      Write a chronological exception log to documents/exception-log.md including:
+        - Exception summary table (order_id, address, failure reason, resolution, responsible party)
+        - Patterns observed (is there a cluster of failures in one area? One driver?)
+        - Recommendations for tomorrow's dispatch
+
+      Verdict:
+        - resolved: every exception has a clear disposition (even if that disposition is RETURN_TO_DEPOT)
+        - escalate: exceptions involving damage claim >$500, fraud indicators, driver safety incident,
+          or customer threatening legal action — these need ops manager immediate attention
+    capabilities:
+      mutates_state: true
+      writes_files: true
+    decision_contract:
+      required_fields: [verdict, exceptions_resolved, exceptions_escalated, reattempt_count, return_to_depot_count]
+
+  generate-analytics:
+    mode: agent
+    agent: ops-analyst
+    directive: |
+      Read all day's operational data:
+        - data/driver-assignments.json (planned routes and assignments)
+        - data/delivery-progress.json (actual execution results)
+        - data/failed-deliveries.json (exception outcomes, if it exists)
+        - data/validated-orders.json (original order batch for baseline)
+
+      Compute driver scorecards for each driver:
+        - stops_assigned, stops_completed, stops_failed, first_attempt_rate
+        - on_time_delivery_pct (delivered within customer's time window)
+        - avg_dwell_time_mins (actual), planned_vs_actual_dwell_ratio
+        - total_miles_estimated, total_hours_worked, deliveries_per_hour, stops_per_mile
+        - efficiency_grade: A (>90%), B (75-90%), C (60-75%), D (<60%)
+
+      Compute fleet-wide service metrics:
+        - total_deliveries_attempted, total_successful, overall_success_rate
+        - first_attempt_delivery_rate (industry benchmark: 85%)
+        - exception_breakdown by type with counts and percentages
+        - on_time_delivery_rate (industry benchmark: 92%)
+
+      Compute cost metrics:
+        - fuel_cost: total_miles × $0.18
+        - labor_cost: total_driver_hours × $22.00
+        - exception_cost: reattempt_count × $8.50 + return_to_depot_count × $15.00
+        - total_operational_cost, cost_per_successful_delivery
+
+      Write structured analytics to data/daily-analytics.json.
+      Write a formatted dashboard to documents/daily-dashboard.md with:
+        - Header: date, total orders, success rate
+        - Driver scorecards table
+        - Exception summary
+        - Cost breakdown
+        - Top 3 highlights (best performers, best routes)
+        - Top 3 concerns (problem areas, patterns to address tomorrow)
+        - Recommendations for next dispatch
+    capabilities:
+      mutates_state: true
+      writes_files: true
+
+  abort-operations:
+    mode: command
+    command:
+      program: bash
+      args:
+        - "-c"
+        - |
+          mkdir -p documents
+          cat > documents/abort-notice.md << 'EOF'
+          # Operations Aborted
+
+          **Date:** $(date +%Y-%m-%d)
+          **Time:** $(date +%H:%M:%S)
+          **Reason:** Delivery batch failed validation — insufficient valid orders to proceed.
+
+          ## Next Steps
+          1. Review data/validated-orders.json for rejection reasons
+          2. Contact operations manager to resolve data quality issues
+          3. Re-submit corrected batch via: ao queue enqueue --title "last-mile-optimizer" --workflow-ref delivery-operations
+          4. Check address data source for systematic geocoding errors
+
+          ## Contact
+          - Dispatch: dispatch@example.com
+          - Ops Manager: opsmanager@example.com
+          EOF
+          echo "Abort notice written to documents/abort-notice.md"
+      cwd_mode: project_root
+      timeout_secs: 30

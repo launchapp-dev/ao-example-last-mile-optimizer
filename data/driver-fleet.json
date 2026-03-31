@@ -1,0 +1,171 @@
+{
+  "fleet_id": "ATX-FLEET-001",
+  "last_updated": "2024-03-14T18:00:00Z",
+  "drivers": [
+    {
+      "driver_id": "DRV-001",
+      "name": "Carlos Mendez",
+      "phone": "512-555-1001",
+      "license_class": "C",
+      "vehicle": {
+        "id": "VEH-001",
+        "type": "van",
+        "make_model": "2022 Ford Transit 250",
+        "plate": "ATX-4821",
+        "max_weight_lbs": 150,
+        "max_volume_cubic_ft": 245,
+        "fuel_type": "gasoline"
+      },
+      "start_location": {
+        "type": "depot",
+        "address": "1500 E Braker Ln, Austin, TX 78758",
+        "lat": 30.3922,
+        "lng": -97.6951
+      },
+      "shift": {
+        "start_time": "07:30",
+        "end_time": "16:30",
+        "max_hours": 9
+      },
+      "zone_familiarity": ["78757", "78758", "78753", "78751", "78752"],
+      "performance_history": {
+        "avg_deliveries_per_hour": 4.2,
+        "on_time_pct": 91,
+        "first_attempt_success_pct": 88,
+        "avg_dwell_time_mins": 2.8
+      }
+    },
+    {
+      "driver_id": "DRV-002",
+      "name": "Maria Santos",
+      "phone": "512-555-1002",
+      "license_class": "C",
+      "vehicle": {
+        "id": "VEH-002",
+        "type": "van",
+        "make_model": "2023 Mercedes Sprinter 2500",
+        "plate": "ATX-7293",
+        "max_weight_lbs": 175,
+        "max_volume_cubic_ft": 270,
+        "fuel_type": "diesel"
+      },
+      "start_location": {
+        "type": "home",
+        "address": "2400 S 1st St, Austin, TX 78704",
+        "lat": 30.2419,
+        "lng": -97.7605
+      },
+      "shift": {
+        "start_time": "07:30",
+        "end_time": "16:30",
+        "max_hours": 9
+      },
+      "zone_familiarity": ["78704", "78741", "78745", "78746", "78749"],
+      "performance_history": {
+        "avg_deliveries_per_hour": 4.5,
+        "on_time_pct": 94,
+        "first_attempt_success_pct": 92,
+        "avg_dwell_time_mins": 2.5
+      }
+    },
+    {
+      "driver_id": "DRV-003",
+      "name": "James Wilson",
+      "phone": "512-555-1003",
+      "license_class": "B",
+      "vehicle": {
+        "id": "VEH-003",
+        "type": "truck",
+        "make_model": "2021 Isuzu NPR",
+        "plate": "ATX-5534",
+        "max_weight_lbs": 400,
+        "max_volume_cubic_ft": 750,
+        "fuel_type": "diesel"
+      },
+      "start_location": {
+        "type": "depot",
+        "address": "1500 E Braker Ln, Austin, TX 78758",
+        "lat": 30.3922,
+        "lng": -97.6951
+      },
+      "shift": {
+        "start_time": "07:00",
+        "end_time": "16:00",
+        "max_hours": 9
+      },
+      "zone_familiarity": ["78731", "78746", "78749", "78704", "78757"],
+      "performance_history": {
+        "avg_deliveries_per_hour": 2.8,
+        "on_time_pct": 87,
+        "first_attempt_success_pct": 95,
+        "avg_dwell_time_mins": 12.5
+      }
+    },
+    {
+      "driver_id": "DRV-004",
+      "name": "Aisha Jackson",
+      "phone": "512-555-1004",
+      "license_class": "C",
+      "vehicle": {
+        "id": "VEH-004",
+        "type": "van",
+        "make_model": "2022 Ram ProMaster 1500",
+        "plate": "ATX-9102",
+        "max_weight_lbs": 130,
+        "max_volume_cubic_ft": 205,
+        "fuel_type": "gasoline"
+      },
+      "start_location": {
+        "type": "home",
+        "address": "1808 E 12th St, Austin, TX 78702",
+        "lat": 30.2677,
+        "lng": -97.7200
+      },
+      "shift": {
+        "start_time": "07:30",
+        "end_time": "16:30",
+        "max_hours": 9
+      },
+      "zone_familiarity": ["78702", "78722", "78701", "78741", "78745"],
+      "performance_history": {
+        "avg_deliveries_per_hour": 4.0,
+        "on_time_pct": 89,
+        "first_attempt_success_pct": 86,
+        "avg_dwell_time_mins": 3.1
+      }
+    },
+    {
+      "driver_id": "DRV-005",
+      "name": "Tony Nguyen",
+      "phone": "512-555-1005",
+      "license_class": "C",
+      "vehicle": {
+        "id": "VEH-005",
+        "type": "van",
+        "make_model": "2023 Ford Transit Connect",
+        "plate": "ATX-3387",
+        "max_weight_lbs": 100,
+        "max_volume_cubic_ft": 150,
+        "fuel_type": "gasoline"
+      },
+      "start_location": {
+        "type": "depot",
+        "address": "1500 E Braker Ln, Austin, TX 78758",
+        "lat": 30.3922,
+        "lng": -97.6951
+      },
+      "shift": {
+        "start_time": "07:30",
+        "end_time": "16:30",
+        "max_hours": 9
+      },
+      "zone_familiarity": ["78758", "78759", "78613", "78753"],
+      "performance_history": {
+        "avg_deliveries_per_hour": 4.8,
+        "on_time_pct": 96,
+        "first_attempt_success_pct": 90,
+        "avg_dwell_time_mins": 2.3
+      }
+    }
+  ]
+}

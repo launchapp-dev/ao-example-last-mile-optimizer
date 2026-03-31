@@ -1,0 +1,65 @@
+default_workflow_ref: delivery-operations
+
+workflows:
+  - id: delivery-operations
+    name: "Daily Delivery Operations"
+    description: "Full daily pipeline: validate orders → cluster → optimize routes → assign drivers → track → handle exceptions → analytics"
+    phases:
+      - validate-orders:
+          on_verdict:
+            rework:
+              target: validate-orders
+            fail:
+              target: abort-operations
+          max_rework_attempts: 2
+      - cluster-deliveries
+      - optimize-routes:
+          on_verdict:
+            reroute:
+              target: cluster-deliveries
+          max_rework_attempts: 3
+      - assign-drivers
+      - track-progress:
+          on_verdict:
+            exceptions:
+              target: handle-exceptions
+            rework:
+              target: track-progress
+          max_rework_attempts: 5
+      - handle-exceptions:
+          on_verdict:
+            escalate:
+              target: generate-analytics
+      - generate-analytics
+    post_success:
+      merge:
+        strategy: squash
+        target_branch: main
+        create_pr: true
+        auto_merge: true
+        cleanup_worktree: true
+
+  - id: route-planning-only
+    name: "Route Planning (No Execution)"
+    description: "Plan and assign routes without tracking — use for pre-day dispatch prep"
+    phases:
+      - validate-orders:
+          on_verdict:
+            rework:
+              target: validate-orders
+            fail:
+              target: abort-operations
+          max_rework_attempts: 2
+      - cluster-deliveries
+      - optimize-routes:
+          on_verdict:
+            reroute:
+              target: cluster-deliveries
+          max_rework_attempts: 3
+      - assign-drivers
+
+  - id: analytics-only
+    name: "End-of-Day Analytics"
+    description: "Generate analytics from existing progress data — use after routes complete"
+    phases:
+      - generate-analytics

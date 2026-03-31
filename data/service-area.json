@@ -1,0 +1,114 @@
+{
+  "service_area_id": "ATX-METRO",
+  "name": "Austin Metro Delivery Zone",
+  "depot": {
+    "name": "Central Warehouse",
+    "address": "1500 E Braker Ln, Austin, TX 78758",
+    "lat": 30.3922,
+    "lng": -97.6951,
+    "phone": "512-555-9000",
+    "dispatcher": "Sandra Lee",
+    "dispatcher_phone": "512-555-9001"
+  },
+  "package_lockers": [
+    {
+      "locker_id": "LOCK-001",
+      "name": "HEB Plus Manchaca",
+      "address": "6900 Manchaca Rd, Austin, TX 78745",
+      "lat": 30.2155,
+      "lng": -97.7892,
+      "max_package_dims": { "length_in": 18, "width_in": 14, "height_in": 14 },
+      "max_weight_lbs": 35
+    },
+    {
+      "locker_id": "LOCK-002",
+      "name": "Amazon Hub - Research Blvd",
+      "address": "8700 Research Blvd, Austin, TX 78758",
+      "lat": 30.4012,
+      "lng": -97.7196,
+      "max_package_dims": { "length_in": 16, "width_in": 12, "height_in": 12 },
+      "max_weight_lbs": 25
+    },
+    {
+      "locker_id": "LOCK-003",
+      "name": "Walgreens - S Congress",
+      "address": "5501 S Congress Ave, Austin, TX 78745",
+      "lat": 30.2047,
+      "lng": -97.7521,
+      "max_package_dims": { "length_in": 14, "width_in": 12, "height_in": 10 },
+      "max_weight_lbs": 20
+    }
+  ],
+  "zones": [
+    {
+      "zone_id": "ZONE-NORTH",
+      "name": "North Austin",
+      "zip_codes": ["78753", "78758", "78759", "78613"],
+      "avg_drive_speed_mph": 25,
+      "typical_stop_density": "medium",
+      "notes": "Mix of apartments and tech office parks. Parking generally available. Cedar Park extends this zone north."
+    },
+    {
+      "zone_id": "ZONE-CENTRAL-NORTH",
+      "name": "Central North",
+      "zip_codes": ["78751", "78752", "78757"],
+      "avg_drive_speed_mph": 20,
+      "typical_stop_density": "high",
+      "notes": "Dense residential. Street parking can be tight. Many older homes without driveways."
+    },
+    {
+      "zone_id": "ZONE-DOWNTOWN",
+      "name": "Downtown / Core",
+      "zip_codes": ["78701", "78702", "78722"],
+      "avg_drive_speed_mph": 15,
+      "typical_stop_density": "very_high",
+      "notes": "Heavy traffic. Limited parking. Many high-rises require loading dock coordination. Best to arrive before 9 AM or after 1 PM."
+    },
+    {
+      "zone_id": "ZONE-EAST",
+      "name": "East Austin",
+      "zip_codes": ["78702", "78721", "78741"],
+      "avg_drive_speed_mph": 18,
+      "typical_stop_density": "high",
+      "notes": "Rapidly developing area. Mix of original residential and new construction. Some one-way streets."
+    },
+    {
+      "zone_id": "ZONE-SOUTH",
+      "name": "South Austin",
+      "zip_codes": ["78704", "78745", "78741"],
+      "avg_drive_speed_mph": 22,
+      "typical_stop_density": "high",
+      "notes": "Popular residential area. Many bungalows and craftsman homes. S Congress and S Lamar corridors have commercial density."
+    },
+    {
+      "zone_id": "ZONE-WEST",
+      "name": "West Austin / Westlake",
+      "zip_codes": ["78746", "78749", "78731"],
+      "avg_drive_speed_mph": 28,
+      "typical_stop_density": "low",
+      "notes": "Affluent residential. Larger lots. Many gated communities — confirm gate codes before dispatch. Hilly terrain slows routes."
+    }
+  ],
+  "known_problem_areas": [
+    {
+      "area": "Downtown Congress Ave",
+      "issue": "Construction on Congress Ave through May 2024. Avoid 10am-2pm.",
+      "alternate_route": "Take Lavaca St or Guadalupe St instead"
+    },
+    {
+      "area": "MoPac Expressway (Loop 1)",
+      "issue": "Heavy congestion 7:30-9am and 4-6pm. Allow 30% extra time.",
+      "alternate_route": "Lamar Blvd parallel route"
+    },
+    {
+      "area": "Steiner Ranch (78732)",
+      "issue": "Gated community. Security checkpoint adds 10-15 min per entry.",
+      "alternate_route": "N/A — must use main entrance"
+    },
+    {
+      "area": "UT Campus Area (78705)",
+      "issue": "No vehicle access on The Drag during event days. Check calendar.",
+      "alternate_route": "Guadalupe from 38th St south or MLK from east"
+    }
+  ]
+}

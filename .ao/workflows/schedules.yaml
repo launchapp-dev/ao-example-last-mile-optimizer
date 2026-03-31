@@ -1,0 +1,15 @@
+schedules:
+  - id: morning-route-planning
+    cron: "0 5 * * 1-6"
+    workflow_ref: route-planning-only
+    enabled: true
+
+  - id: midday-reoptimization
+    cron: "0 12 * * 1-6"
+    workflow_ref: delivery-operations
+    enabled: true
+
+  - id: evening-analytics
+    cron: "0 19 * * 1-6"
+    workflow_ref: analytics-only
+    enabled: true
